@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: Loan-Management-System
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database: mysql
+  datasource:
+    url: jdbc:mysql://localhost:3306/loan_management_system?createDatabaseIfNotExist=true
+    username: root
+    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver
+server:
+  port: 8080
+
