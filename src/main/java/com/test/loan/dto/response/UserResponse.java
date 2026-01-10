@@ -1,4 +1,5 @@
 package com.test.loan.dto.response;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,9 +9,8 @@ import lombok.NoArgsConstructor;
 @Data
 public class UserResponse {
     private Long id;
-    private String fullName;
-    private String nic;
-    private String phone;
-    private String address;
+    private String username;
+    private String email;
+    private String role;
     private String status;
 }

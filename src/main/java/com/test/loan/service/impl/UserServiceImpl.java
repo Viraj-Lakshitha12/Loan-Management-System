@@ -1,31 +1,36 @@
 package com.test.loan.service.impl;
 
 import com.test.loan.advisor.BusinessException;
+import com.test.loan.config.mapper.UserMapper;
+import com.test.loan.config.security.JwtUtil;
 import com.test.loan.dto.common.ErrorCode;
 import com.test.loan.dto.request.UserDto;
+import com.test.loan.dto.response.LoginResponse;
 import com.test.loan.dto.response.UserResponse;
 import com.test.loan.entity.User;
 import com.test.loan.repo.UserRepo;
 import com.test.loan.service.UserService;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
-    @Autowired
+
     private final UserRepo userRepo;
+    private final UserMapper userMapper;
+    private final JwtUtil jwtUtil;
 
-    private final ModelMapper modelMapper;
-
-    public UserServiceImpl(UserRepo userRepo, ModelMapper modelMapper) {
+    private final PasswordEncoder passwordEncoder;
+    public UserServiceImpl(UserRepo userRepo, UserMapper userMapper, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
         this.userRepo = userRepo;
-        this.modelMapper = modelMapper;
+        this.userMapper = userMapper;
+        this.jwtUtil = jwtUtil;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -36,14 +41,17 @@ public class UserServiceImpl implements UserService {
         if (userRepo.existsUserByUsername(userDto.getUsername())) {
             throw new BusinessException(ErrorCode.DATA_CONFLICT);
         }
-        User save = userRepo.save(modelMapper.map(userDto, User.class));
-        return modelMapper.map(save, UserResponse.class);
+        User userMapperEntity = userMapper.toEntity(userDto);
+        userMapperEntity.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        User save = userRepo.save(userMapperEntity);
+        return userMapper.toResponse(save);
     }
 
     @Override
     public UserResponse getUserById(Long id) {
-        User user = userRepo.findById(id).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        return modelMapper.map(user, UserResponse.class);
+        User user = userRepo.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        return userMapper.toResponse(user);
     }
 
     @Override
@@ -62,6 +70,18 @@ public class UserServiceImpl implements UserService {
                 true,
                 true,
                 List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
+        );
+    }
+
+    @Override
+    public LoginResponse loginUser(String username, String password) {
+        User user = userRepo.findByUsername(username)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new BusinessException(ErrorCode.CREDENTIALS_INVALID);
+        }
+        return new LoginResponse(
+                jwtUtil.generateToken(user.getUsername(), user.getRole().name())
         );
     }
 

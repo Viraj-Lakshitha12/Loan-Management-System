@@ -1,6 +1,7 @@
 package com.test.loan.service;
 
 import com.test.loan.dto.request.UserDto;
+import com.test.loan.dto.response.LoginResponse;
 import com.test.loan.dto.response.UserResponse;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -11,5 +12,5 @@ public interface UserService {
 
     UserDetails loadUserByUsername(String username);
 
-
+    LoginResponse loginUser(String username, String password);
 }
