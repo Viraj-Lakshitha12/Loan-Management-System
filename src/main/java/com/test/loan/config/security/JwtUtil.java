@@ -36,4 +36,7 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
     }
+    public boolean isTokenExpired(String token) {
+        return extractClaims(token).getExpiration().before(new Date());
+    }
 }

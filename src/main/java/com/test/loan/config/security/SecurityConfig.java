@@ -20,12 +20,13 @@ public class SecurityConfig {
     ) throws Exception {
 
         http.csrf(csrf -> csrf.disable())
-                .sessionManagement(sm ->
-                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/users/**").permitAll()
                         .anyRequest().authenticated()
                 )
+                // ❗ JWT MUST RUN BEFORE AUTHORIZATION
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -36,4 +37,3 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
-
