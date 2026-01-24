@@ -11,24 +11,30 @@ import com.test.loan.repo.LoanRepo;
 import com.test.loan.service.LoanService;
 import jakarta.transaction.Transactional;
 import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.test.loan.entity.Customer;
+import com.test.loan.service.kakfa.KafkaProducerService;
+import com.test.loan.event.LoanApprovedEvent;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Service
 @Transactional
 public class LoanServiceImpl implements LoanService {
 
-    @Autowired
     private final LoanRepo loanRepo;
-    @Autowired
     private final ModelMapper modelMapper;
-    @Autowired
     private final CustomerRepo customerRepo;
+    private final KafkaProducerService kafkaProducer;
 
-    public LoanServiceImpl(LoanRepo loanRepo, ModelMapper modelMapper, CustomerRepo customerRepo) {
+    public LoanServiceImpl(LoanRepo loanRepo,
+                           ModelMapper modelMapper,
+                           CustomerRepo customerRepo,
+                           KafkaProducerService kafkaProducer) {
         this.loanRepo = loanRepo;
         this.modelMapper = modelMapper;
         this.customerRepo = customerRepo;
+        this.kafkaProducer = kafkaProducer;
     }
 
     @Override
@@ -49,7 +55,6 @@ public class LoanServiceImpl implements LoanService {
             );
         }
         Loan loan = modelMapper.map(loanDto, Loan.class);
-        System.out.println("BEFORE FLUSH: " + loan);
         Loan savedLoan = loanRepo.save(loan);
 
         return "Loan Created with ID: " + savedLoan.getId();
@@ -92,7 +97,6 @@ public class LoanServiceImpl implements LoanService {
 
     @Override
     public String ApproveLoan(Long loanId) {
-
         Loan loan = loanRepo.findById(loanId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.LOAN_NOT_FOUND,
@@ -113,14 +117,30 @@ public class LoanServiceImpl implements LoanService {
         }
 
         loan.setLoanStatus(LoanStatus.APPROVED);
-        loanRepo.save(loan);
+        Loan savedLoan = loanRepo.save(loan);
+
+        // 🔥 KAFKA EVENT PUBLISH කරනවා (මෙතන තමයි magic එක!)
+        Customer customer = customerRepo.findById(loan.getCustomerId())
+                .orElseThrow(() -> new BusinessException(ErrorCode.CUSTOMER_NOT_FOUND));
+
+        LoanApprovedEvent event = new LoanApprovedEvent(
+                savedLoan.getId(),
+                savedLoan.getLoanNumber(),
+                customer.getId(),
+                customer.getFullName(),
+                BigDecimal.valueOf(savedLoan.getPrincipalAmount()),
+                savedLoan.getLoanStatus().name(),
+                LocalDateTime.now(),
+                "SYSTEM"  // මේක logged user එක්කෙන් ගන්න පුළුවන්
+        );
+
+        kafkaProducer.publishLoanApproved(event);
 
         return "Loan approved successfully";
     }
 
     @Override
     public String RejectLoan(Long loanId) {
-
         Loan loan = loanRepo.findById(loanId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.LOAN_NOT_FOUND,
@@ -138,5 +158,4 @@ public class LoanServiceImpl implements LoanService {
 
         return "Loan rejected successfully";
     }
-
 }

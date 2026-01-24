@@ -34,4 +34,15 @@ public class LoanController {
         return ResponseEntity.ok(ApiResponse.success(200, "Loan status updated successfully",
                 loanService.changeLoanStatus(id, LoanStatus)));
     }
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<String>> approveLoan(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(200, "Loan approved successfully",
+                loanService.ApproveLoan(id)));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<String>> rejectLoan(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(200, "Loan rejected successfully",
+                loanService.RejectLoan(id)));
+    }
 }
