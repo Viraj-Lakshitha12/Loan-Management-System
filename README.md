@@ -1,638 +1,255 @@
-# Spring Boot Advanced REST API – Reference Sample
+# 🏦 Loan Management System
 
-This sample is designed **only to validate whether your REST API knowledge is correct and industry-aligned** (not beginner CRUD). You can directly compare this with your existing projects.
+> Enterprise-grade Spring Boot application with REST APIs, Kafka event streaming, JWT authentication, and production-ready patterns.
 
----
+## 🚀 Tech Stack
 
-## 1. Domain Example: User Management (Enterprise Style)
+### Backend
+- **Spring Boot 3.2.4** - Core framework
+- **Spring Security** - JWT authentication
+- **Spring Data JPA** - Database ORM
+- **MapStruct** - DTO mapping
+- **MySQL** - Relational database
 
-### Base URL
+### Event-Driven Architecture
+- **Apache Kafka** - Event streaming
+- **Zookeeper** - Kafka coordination
+- **Docker Compose** - Local development
 
-```
-/api/v1/users
-```
-
----
-
-## 2. Resource Naming (Plural, Nested, Clean)
-
-### ✅ Correct
-
-```
-GET    /api/v1/users
-GET    /api/v1/users/{userId}
-POST   /api/v1/users
-PUT    /api/v1/users/{userId}
-PATCH  /api/v1/users/{userId}
-DELETE /api/v1/users/{userId}
-
-GET    /api/v1/users/{userId}/roles
-POST   /api/v1/users/{userId}/roles
-```
-
-### ❌ Wrong
-
-```
-/getUser
-/createUser
-/user/update
-```
-
-**Rule:**
-
-* Nouns, not verbs
-* Always plural
-* Relationships are nested
+### Code Quality
+- **Lombok** - Reduce boilerplate
+- **Global Exception Handler** - Standardized error responses
+- **Circuit Breaker Pattern** - Graceful degradation
 
 ---
 
-## 3. Idempotency – PUT vs PATCH
-
-### PUT (Replace full resource – idempotent)
-
-```http
-PUT /api/v1/users/101
+## 📁 Project Structure
 ```
-
-```json
-{
-  "name": "Kamal",
-  "email": "kamal@mail.com",
-  "status": "ACTIVE"
-}
-```
-
-Calling this multiple times results in **same state**.
-
----
-
-### PATCH (Partial update – not necessarily idempotent)
-
-```http
-PATCH /api/v1/users/101
-```
-
-```json
-{
-  "status": "SUSPENDED"
-}
-```
-
-Used for **partial changes only**.
-
----
-
-## 4. Pagination / Sorting / Filtering (Industry Standard)
-
-### Request
-
-```http
-GET /api/v1/users?page=0&size=10&sort=createdAt,desc&status=ACTIVE
-```
-
-### Controller
-
-```java
-@GetMapping
-public Page<UserResponse> getUsers(
-    @RequestParam(defaultValue = "0") int page,
-    @RequestParam(defaultValue = "10") int size,
-    @RequestParam(defaultValue = "createdAt,desc") String sort,
-    @RequestParam(required = false) UserStatus status
-) {
-    return userService.getUsers(page, size, sort, status);
-}
+loan-management-system/
+├── config/
+│   ├── kafka/          # Kafka producer/consumer config
+│   ├── security/       # JWT, Security filters
+│   └── mapper/         # MapStruct mappers
+├── controller/         # REST endpoints
+├── service/
+│   ├── impl/          # Business logic
+│   └── kakfa/         # Kafka producers/consumers
+├── entity/            # JPA entities
+├── repo/              # Spring Data repositories
+├── dto/
+│   ├── request/       # API request DTOs
+│   └── response/      # API response DTOs
+├── event/             # Kafka event models
+├── advisor/           # Global exception handler
+└── enums/             # Application enums
 ```
 
 ---
 
-## 5. Versioning Strategy (Preferred for Enterprise)
+## 🎯 Features
 
-### URL Versioning (Most Common)
+### ✅ Implemented
 
-```
-/api/v1/users
-/api/v2/users
-```
+#### 1. **User Management**
+- JWT-based authentication
+- Role-based access control (ADMIN, OFFICER)
+- User registration and login
 
-### ❌ Avoid
+#### 2. **Customer Management**
+- Create and retrieve customers
+- Customer status management
+- Pagination support
 
-* Header-based versioning (hard to debug)
-* Media-type versioning (complex)
+#### 3. **Loan Management**
+- Create loan applications
+- Approve/Reject loans (with business rules)
+- Loan status tracking
+- **Optimistic locking** to prevent double approval
 
----
+#### 4. **Payment Processing**
+- Record payments for approved loans
+- Payment validation (only for APPROVED loans)
+- Payment history tracking
 
-## 6. Error Response Standardization (MOST DEVS FAIL HERE)
+#### 5. **Event-Driven Architecture (Kafka)**
+- **Loan Approved Event** → Audit log, notifications
+- **Payment Received Event** → Audit log, accounting updates
+- Asynchronous processing for scalability
 
-### Global Error Response Format
-
-```json
-{
-  "timestamp": "2025-01-10T10:30:00",
-  "status": 400,
-  "errorCode": "USER_001",
-  "message": "Validation failed",
-  "path": "/api/v1/users",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Invalid email format"
-    }
-  ]
-}
-```
-
----
-
-## 7. Global Exception Handler (MANDATORY)
-
-```java
-@RestControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException ex,
-                                                             HttpServletRequest request) {
-        List<FieldErrorResponse> errors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(err -> new FieldErrorResponse(err.getField(), err.getDefaultMessage()))
-                .toList();
-
-        ApiErrorResponse response = ApiErrorResponse.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .errorCode("USER_001")
-                .message("Validation failed")
-                .path(request.getRequestURI())
-                .errors(errors)
-                .build();
-
-        return ResponseEntity.badRequest().body(response);
-    }
-}
-```
+#### 6. **Production-Ready Patterns**
+- Global exception handling
+- Standardized API responses
+- Circuit breaker for Kafka (graceful degradation)
+- Health check service
+- Comprehensive logging
 
 ---
 
-## 8. Error Response DTOs
+## 🔥 Key Business Rules
 
-```java
-@Data
-@Builder
-public class ApiErrorResponse {
-    private LocalDateTime timestamp;
-    private int status;
-    private String errorCode;
-    private String message;
-    private String path;
-    private List<FieldErrorResponse> errors;
-}
-```
-
-```java
-@AllArgsConstructor
-@Data
-public class FieldErrorResponse {
-    private String field;
-    private String message;
-}
-```
+1. ✅ Loan can be approved **only once**
+2. ✅ Rejected loan **cannot be approved**
+3. ✅ Payments **only allowed for approved loans**
+4. ✅ Optimistic locking prevents concurrent modifications
 
 ---
 
-## 9. Validation Example
+## 🛠️ Setup Instructions
 
-```java
-public class CreateUserRequest {
+### Prerequisites
+- Java 17+
+- Maven 3.8+
+- MySQL 8.0+
+- Docker & Docker Compose
 
-    @NotBlank
-    private String name;
-
-    @Email
-    @NotBlank
-    private String email;
-}
+### 1. Clone Repository
+```bash
+git clone https://github.com/Viraj-Lakshitha12/Loan-Management-System.git
+cd loan-management-system
 ```
 
----
-
-## 10. How to Self-Check Your Existing Projects
-
-Ask yourself:
-
-* ❓ Do all APIs return **same error format**?
-* ❓ Do I use PUT and PATCH correctly?
-* ❓ Is pagination implemented everywhere?
-* ❓ Do I avoid verbs in URLs?
-* ❓ Do I version APIs properly?
-
-If YES → You are **above average**.
-If NO → This is your upgrade path.
-
----
-
-## 11. Kafka Event‑Driven Version (Same API)
-
-### Goal
-
-Keep the **same REST API**, but publish domain events to Kafka so other services react asynchronously.
-
----
-
-### Architecture
-
+### 2. Configure Database
+Update `application.yml`:
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/loan_management_system
+    username: root
+    password: your_password
 ```
-Client
-  ↓ REST
-User Service (Spring Boot)
-  ├─ DB (users)
-  └─ Kafka Producer → user.events
 
-Audit Service (Kafka Consumer)
-Notification Service (Kafka Consumer)
+### 3. Start Kafka (Docker Compose)
+```bash
+docker-compose up -d
+```
+
+### 4. Run Application
+```bash
+mvn clean install
+mvn spring-boot:run
+```
+
+### 5. Test with Postman
+Import `postman_collection.json` (if provided)
+
+---
+
+## 📡 API Endpoints
+
+### Authentication
+```
+POST /api/v1/users/register  - Register new user
+POST /api/v1/users/login     - Login (returns JWT)
+```
+
+### Customers
+```
+POST /api/v1/customers       - Create customer
+GET  /api/v1/customers/{id}  - Get customer by ID
+```
+
+### Loans
+```
+POST  /api/v1/loans                 - Create loan
+GET   /api/v1/loans/{id}            - Get loan details
+PATCH /api/v1/loans/{id}/approve    - Approve loan (triggers Kafka event)
+PATCH /api/v1/loans/{id}/reject     - Reject loan
+```
+
+### Payments
+```
+POST /api/v1/payments        - Record payment (triggers Kafka event)
+GET  /api/v1/payments/{id}   - Get payment details
 ```
 
 ---
 
-### When to Publish Events
+## 🎯 Kafka Topics
 
-* User created
-* User updated
-* User deleted
-
----
-
-### Event Model
-
-```json
-{
-  "eventId": "uuid",
-  "eventType": "USER_CREATED",
-  "timestamp": "2025-01-10T10:30:00",
-  "data": {
-    "userId": 101,
-    "email": "kamal@mail.com"
-  }
-}
-```
+| Topic | Event | Consumer Action |
+|-------|-------|----------------|
+| `loan-approved` | Loan approval | Save audit log, send notifications |
+| `payment-received` | Payment recorded | Save audit log, update accounting |
 
 ---
 
-### Kafka Producer Example
+## 🔒 Security
 
-```java
-@Component
-@RequiredArgsConstructor
-public class UserEventProducer {
-
-  private final KafkaTemplate<String, UserEvent> kafkaTemplate;
-
-  public void publishUserCreated(User user) {
-    UserEvent event = UserEvent.created(user);
-    kafkaTemplate.send("user.events", event.getEventId(), event);
-  }
-}
-```
+- JWT tokens (Bearer authentication)
+- Password encryption (BCrypt)
+- Role-based access control
+- Public endpoints: `/api/v1/users/**`
+- Protected endpoints: All others
 
 ---
 
-### Service Layer Integration
+## 📊 Database Schema
 
-```java
-@Transactional
-public User createUser(CreateUserRequest request) {
-  User user = repository.save(mapper.toEntity(request));
-  userEventProducer.publishUserCreated(user);
-  return user;
-}
-```
+### Main Tables
+- `users` - Application users
+- `customers` - Loan customers
+- `loans` - Loan applications
+- `payments` - Payment records
+- `audit_logs` - Event audit trail
 
 ---
 
-### What This Proves (Interview Value)
+## 🚀 What Makes This Production-Ready?
 
-* Event‑driven architecture
-* Loose coupling
-* Async processing
-* Enterprise scalability mindset
-
----
-
-## 13. gRPC + REST Hybrid Version (Same Domain)
-
-### Goal
-
-Expose **REST for external clients** and **gRPC for internal service‑to‑service communication**.
+1. ✅ **Event-Driven Architecture** (Kafka)
+2. ✅ **Asynchronous Processing** (Non-blocking)
+3. ✅ **Circuit Breaker Pattern** (Fault tolerance)
+4. ✅ **Optimistic Locking** (Concurrency control)
+5. ✅ **Global Exception Handling** (Consistent errors)
+6. ✅ **Structured Logging** (Monitoring-ready)
+7. ✅ **Security Best Practices** (JWT, BCrypt)
+8. ✅ **Clean Architecture** (Separation of concerns)
 
 ---
 
-### Architecture
+## 📈 Future Enhancements
 
-```
-Client → REST → API Gateway
-               ↓ gRPC
-           User Service
-               ↓ gRPC
-        Notification Service
-```
+### Next Phase
+- [ ] gRPC for internal service communication
+- [ ] Redis caching for frequent queries
+- [ ] Elasticsearch for log aggregation
+- [ ] API Gateway (Spring Cloud Gateway)
+- [ ] Kubernetes deployment
 
----
-
-### gRPC Contract (Proto)
-
-```proto
-syntax = "proto3";
-
-service UserGrpcService {
-  rpc GetUserById (UserRequest) returns (UserResponse);
-}
-
-message UserRequest {
-  int64 userId = 1;
-}
-
-message UserResponse {
-  int64 userId = 1;
-  string email = 2;
-  string status = 3;
-}
-```
+### Advanced Features
+- [ ] Rate limiting
+- [ ] Distributed tracing (Sleuth + Zipkin)
+- [ ] Metrics (Prometheus + Grafana)
+- [ ] Multi-tenancy support
 
 ---
 
-### gRPC Server Implementation
+## 🎓 Learning Value
 
-```java
-@GrpcService
-public class UserGrpcServiceImpl extends UserGrpcServiceGrpc.UserGrpcServiceImplBase {
+This project demonstrates:
+- Senior-level Spring Boot patterns
+- Microservices architecture fundamentals
+- Event-driven design
+- Production-ready code quality
+- Industry best practices
 
-  @Override
-  public void getUserById(UserRequest request, StreamObserver<UserResponse> responseObserver) {
-    User user = userService.findById(request.getUserId());
-
-    UserResponse response = UserResponse.newBuilder()
-        .setUserId(user.getId())
-        .setEmail(user.getEmail())
-        .setStatus(user.getStatus().name())
-        .build();
-
-    responseObserver.onNext(response);
-    responseObserver.onCompleted();
-  }
-}
-```
+**Suitable for:**
+- Mid-to-Senior Java developer interviews
+- Microservices architecture discussions
+- Real-world project portfolio
 
 ---
 
-### REST Controller Still Exists
+## 📞 Contact
 
-```java
-@GetMapping("/api/v1/users/{id}")
-public UserResponse getUser(@PathVariable Long id) {
-  return userService.getUser(id);
-}
-```
+Your Name - [Viraj Lakshitha](mailto:your.viraj.lakshitha.22222@gmail.com)
 
----
+GitHub: [@Viraj-Lakshitha12](https://github.com/Viraj-Lakshitha12)
 
-### Why Hybrid Is Important
-
-* REST → client‑friendly
-* gRPC → high‑performance internal calls
-* Common in **large Japanese enterprises**
+LinkedIn: [@viraj-lakshitha01](https://www.linkedin.com/in/viraj-lakshitha01/)
 
 ---
 
-## 14. GitHub‑Ready Project Structure
+## 📄 License
 
-```
-user-service
- ├─ controller (REST)
- ├─ grpc
- ├─ service
- ├─ repository
- ├─ kafka
- ├─ dto
- ├─ exception
- └─ config
-```
-
----
-
-## 15. How to Explain This in Interviews (Japan Style)
-
-Key sentence:
-
-> "We expose REST APIs for external clients, while using Kafka for asynchronous workflows and gRPC for internal high‑performance communication."
-
-This shows **senior‑level architectural thinking**.
-
----
-
-If you want next:
-
-* Kafka consumer implementations
-* Docker Compose (Kafka + Zookeeper)
-* Interview Q&A based on this architecture
-* README.md for GitHub
-
-Tell me the next step.
-
-## 16. Full Backend-Only Practice Task (NO FRONTEND)
-
-This section is **exactly** what you asked for: a **clear backend task**, entities with attributes, and business flows so you can code and self-check.
-
----
-
-## Project: Loan Management System (Enterprise Style)
-
-### Scope
-
-* Backend only (Spring Boot)
-* REST + Kafka + gRPC
-* No UI needed (Postman is enough)
-
----
-
-## Core Entities (START WITH THESE)
-
-### 1️⃣ User
-
-```java
-User
-- id (Long)
-- username (String)
-- email (String)
-- role (ADMIN, OFFICER)
-- status (ACTIVE, SUSPENDED)
-- createdAt (LocalDateTime)
-```
-
----
-
-### 2️⃣ Customer
-
-```java
-Customer
-- id (Long)
-- fullName (String)
-- nic (String)
-- phone (String)
-- address (String)
-- status (ACTIVE, BLACKLISTED)
-- createdAt (LocalDateTime)
-```
-
----
-
-### 3️⃣ Loan
-
-```java
-Loan
-- id (Long)
-- loanNumber (String)
-- customerId (Long)
-- principalAmount (BigDecimal)
-- interestRate (BigDecimal)
-- loanStatus (PENDING, APPROVED, REJECTED, CLOSED)
-- createdAt (LocalDateTime)
-- version (Long)  // optimistic locking
-```
-
----
-
-### 4️⃣ Payment
-
-```java
-Payment
-- id (Long)
-- loanId (Long)
-- amount (BigDecimal)
-- paymentDate (LocalDateTime)
-- paymentType (CASH, BANK)
-```
-
----
-
-## REST APIs You MUST Implement
-
-### Customer APIs
-
-```
-POST   /api/v1/customers
-GET    /api/v1/customers/{id}
-GET    /api/v1/customers?page=&size=&status=
-```
-
----
-
-### Loan APIs
-
-```
-POST   /api/v1/loans
-PATCH  /api/v1/loans/{id}/approve
-PATCH  /api/v1/loans/{id}/reject
-GET    /api/v1/loans?page=&size=&status=
-```
-
----
-
-### Payment APIs
-
-```
-POST /api/v1/loans/{loanId}/payments
-GET  /api/v1/loans/{loanId}/payments
-```
-
----
-
-## Business Rules (VERY IMPORTANT)
-
-* Loan can be approved **only once**
-* Rejected loan cannot receive payments
-* Payment updates loan balance
-* Optimistic locking must prevent double approval
-
----
-
-## Kafka Events (PRODUCER SIDE)
-
-### Publish Events On:
-
-* Loan Approved
-* Loan Rejected
-* Payment Received
-
-### Topic
-
-```
-loan.events
-```
-
-### Event Example
-
-```json
-{
-  "eventType": "LOAN_APPROVED",
-  "loanId": 1001,
-  "timestamp": "2025-01-10T10:30:00"
-}
-```
-
----
-
-## Kafka Consumer Tasks (SEPARATE SERVICE)
-
-### Audit Service
-
-* Consume events
-* Save audit logs
-
-```java
-AuditLog
-- id
-- eventType
-- referenceId
-- createdAt
-```
-
----
-
-## gRPC Task (INTERNAL ONLY)
-
-### Purpose
-
-* Fetch loan summary internally
-
-### gRPC Method
-
-```
-rpc GetLoanSummary (LoanRequest) returns (LoanSummaryResponse)
-```
-
-### Response Fields
-
-```java
-- loanId
-- customerName
-- principalAmount
-- loanStatus
-```
-
----
-
-## Project Structure (MANDATORY)
-
-```
-loan-service
- ├─ controller
- ├─ service
- ├─ repository
- ├─ kafka
- ├─ grpc
- ├─ entity
- ├─ dto
- ├─ exception
- └─ config
-```
+This project is licensed under the MIT License.
