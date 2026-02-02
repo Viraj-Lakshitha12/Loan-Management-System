@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /* -------------------- Validation Errors (400) -------------------- */
+    /* -------------------- Validation Errors  -------------------- */
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(
@@ -49,7 +49,7 @@ public class GlobalExceptionHandler {
                 ));
     }
 
-    /* -------------------- Business Errors (4xx) -------------------- */
+    /* -------------------- Business Errors  -------------------- */
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ApiErrorResponse> handleBusiness(
@@ -165,7 +165,6 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
-        // log properly in real systems
         ex.printStackTrace();
 
         ErrorCode ec = ErrorCode.INTERNAL_SERVER_ERROR;

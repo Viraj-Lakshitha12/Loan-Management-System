@@ -17,12 +17,14 @@ spring:
   kafka:
     bootstrap-servers: localhost:9092
 
+    # Producer settings
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         spring.json.add.type.headers: false
 
+    # Consumer settings
     consumer:
       group-id: loan-management-group
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
@@ -30,6 +32,7 @@ spring:
       properties:
         spring.json.trusted.packages: "*"
       auto-offset-reset: earliest
+      enable-auto-commit: false
 
 server:
   port: 8080

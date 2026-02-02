@@ -23,7 +23,7 @@ public class KafkaConsumerService {
     }
 
     /**
-     * මේක Loan approve වෙලා event එකක් ආවාම automatically call වෙනවා
+     * after the  Loan approval event automatically call this method
      */
     @KafkaListener(
             topics = "loan-approved",
@@ -34,7 +34,7 @@ public class KafkaConsumerService {
         log.info("📥 Received LoanApprovedEvent: Loan {} approved", event.getLoanNumber());
 
         try {
-            // Audit log එකට save කරනවා
+            // Audit log save
             AuditLog auditLog = new AuditLog();
             auditLog.setAction("LOAN_APPROVED");
             auditLog.setEntityType("LOAN");
@@ -49,20 +49,19 @@ public class KafkaConsumerService {
 
             log.info("✅ Audit log saved for loan approval");
 
-            // මෙතනින් අපිට කරන්න පුළුවන්:
-            // - Email යවන්න
-            // - SMS යවන්න
-            // - Accounting system එකට notify කරන්න
-            // - Dashboard එක update කරන්න
+            // - Send Email
+            // - SMS notification
+            // - Accounting system integration
+            // - Update customer dashboard
 
         } catch (Exception e) {
             log.error("❌ Error processing loan approved event: {}", e.getMessage());
-            // Production එකේ මේක retry queue එකකට යවන්න ඕන
+            // Handle exception appropriately
         }
     }
 
     /**
-     * මේක Payment එකක් ආවාම automatically call වෙනවා
+     * after the  Payment received event automatically call this method
      */
     @KafkaListener(
             topics = "payment-received",
@@ -89,7 +88,6 @@ public class KafkaConsumerService {
 
             log.info("✅ Audit log saved for payment");
 
-            // මෙතනින් අපිට කරන්න පුළුවන්:
             // - Payment confirmation email
             // - Update loan balance
             // - Generate receipt
