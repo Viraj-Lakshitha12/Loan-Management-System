@@ -232,19 +232,7 @@ If NO → This is your upgrade path.
 
 ---
 
-## 11. Why This Matters for Japan SE Interviews
-
-Japan interviews focus on:
-
-* Predictability
-* Consistency
-* Maintainability
-
-This design matches **real Japanese enterprise backend standards**.
-
----
-
-## 12. Kafka Event‑Driven Version (Same API)
+## 11. Kafka Event‑Driven Version (Same API)
 
 ### Goal
 
